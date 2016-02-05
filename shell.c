@@ -5,163 +5,145 @@
 #include<fcntl.h>
 
 #define MAX_COMMAND_LINE_BUF_SIZE 1024
+
 /*
- * Displays any command given in history 
+ * Displays any command given in history
  */
 
-struct list 
-{
-    char *command ;
-    struct list *next; 
-}head;
+struct list {
+    char           *command;
+    struct list    *next;
+} head;
 
-void add_command_to_history(char * command)
+void 
+add_command_to_history(char *command)
 {
-    struct list *temp ; 
-    if (!head) 
-    {
+    struct list    *temp;
+    if (!head) {
 	/*
-	 * Means we are inserting first element in history 
+	 * Means we are inserting first element in history
 	 */
-	temp = (struct list *)malloc(sizeof(struct list ));
-	head = temp ; 
-	head ->next = NULL;
+	temp = (struct list *)malloc(sizeof(struct list));
+	head = temp;
+	head->next = NULL;
 	strcpy(head->command, command);
-    } 
-    else 
-    {
-	temp = (struct list *)malloc(sizeof(struct list ));
+    } else {
+	temp = (struct list *)malloc(sizeof(struct list));
 	/*
 	 * Insert the element at head of the list
 	 */
-	temp->next = head; 
+	temp->next = head;
 	strcpy(temp->command, command);
 	head = temp;
     }
 }
 
-void check_history(char *buf, int len) 
+void 
+check_history(char *buf, int len)
 {
-    struct list *temp = head ;
-    if (temp) 
-    {
+    struct list    *temp = head;
+    if (temp) {
 	/*
-	 * There are no commands in the list 
+	 * There are no commands in the list
 	 */
-	return ;
-    }
-    else 
-    {
-	while (temp)
-	{
-	    if (strncmp(buf, temp->command, len-1))
-	    {
-		// Print the command
+	return;
+    } else {
+	while (temp) {
+	    if (strncmp(buf, temp->command, len - 1)) {
+		//Print the command
 		c = getchar();
-		if (c == '\n') 
-		{
+		if (c == '\n') {
 		    return temp->command;
-		}
-		else if (c == '\t') 
-		{
-		    temp = temp->next; 
+		} else if (c == '\t') {
+		    temp = temp->next;
 		    continue;
-		}
-		else 
-		{
+		} else {
 		    printf("Not a valid command \n");
-		    return ;
+		    return;
 		}
-	    }
-	    else 
-	    {
-		temp = temp ->next;
+	    } else {
+		temp = temp->next;
 		continue;
 	    }
 	}
     }
 }
 
-    
-print_shell_prompt() 
+void 
+print_shell_prompt()
 {
-    printf("%s@%s $:",getlogin(), getenv("SHELL"));
+    printf("%s@%s $:", getlogin(), "SA_SHELL");
 }
 
+void
 read_profile_file()
 {
 
 }
 
-char * read_command_line() 
+char*
+read_command_line()
 {
-    int buf_size = MAX_COMMAND_LINE_BUF_SIZE; 
-    char *buf; 
-    int index;
+    int		buf_size = MAX_COMMAND_LINE_BUF_SIZE;
+    char        *buf;
+    int		index;
 
     buf = malloc(sizeof(char) * buf_size);
-    if (buf == NULL) 
-    {
+    if (buf == NULL) {
 	printf(" Memory allocation failure for MALLOC in %s:%d", __FUNCTION__,
 	       __LINE__);
 	return NULL;
     }
-    while (TRUE) 
-    {
-	c= getchar();
-	if (c == '\t') 
-	{
-	    /* 
-	     * Implement tab or history feature here 
+    while (TRUE) {
+	c = getchar();
+	if (c == '\t') {
+	    /*
+	     * Implement tab or history feature here
 	     */
 	    check_history(buf, index);
 	}
-	if (c == '\n') 
-	{
+	if (c == '\n') {
 	    buf[index] = '\0';
 	    return buf;
-	}
-	else 
-	{
+	} else {
 	    buf[index] = c;
 	}
 	index++;
     }
 }
 
-bool execute_shell_command(char ** command)
+bool 
+execute_shell_command(char **command)
 {
 
-    if(fork()) 
-    {
+    if (fork()) {
 	/*
 	 * Child process
 	 */
 	execvp(command[0], command);
-    }
-    else 
-    {
+    } else {
 	/*
-	 * Parent process 
+	 * Parent process
 	 */
     }
 }
 
-int main()
+int 
+main()
 {
-    bool status = TRUE ; 
+    bool    status = TRUE;
 
     /*
-     * Read the .profile file in the same directory
-     * and init shell with path and other environment variables  
-     */ 
+     * Read the .profile file in the same directory and init shell with
+     * path and other environment variables
+     */
     read_profile_file();
 
-    while(status) {
-	print_shell_prompt(); 
-	
+    while (status) {
+	print_shell_prompt();
+
 	command_line = read_command_line();
-	
+
 	add_command_to_history(command_line);
 
 	status = execute_shell_command();
