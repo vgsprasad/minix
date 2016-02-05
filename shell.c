@@ -13,11 +13,36 @@ struct list
 {
     char *command ;
     struct list *next; 
-}command_list;
+}head;
+
+void add_command_to_history(char * command)
+{
+    struct list *temp ; 
+    if (!head) 
+    {
+	/*
+	 * Means we are inserting first element in history 
+	 */
+	temp = (struct list *)malloc(sizeof(struct list ));
+	head = temp ; 
+	head ->next = NULL;
+	strcpy(head->command, command);
+    } 
+    else 
+    {
+	temp = (struct list *)malloc(sizeof(struct list ));
+	/*
+	 * Insert the element at head of the list
+	 */
+	temp->next = head; 
+	strcpy(temp->command, command);
+	head = temp;
+    }
+}
 
 void check_history(char *buf, int len) 
 {
-    struct list *temp = command_list ;
+    struct list *temp = head ;
     if (temp) 
     {
 	/*
@@ -137,7 +162,7 @@ int main()
 	
 	command_line = read_command_line();
 	
-	add_command_to_list(command_line);
+	add_command_to_history(command_line);
 
 	status = execute_shell_command();
     }
