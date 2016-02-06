@@ -5,7 +5,8 @@
 #include<fcntl.h>
 
 #define MAX_COMMAND_LINE_BUF_SIZE 1024
-
+#define TRUE                      1
+#define FALSE                     0
 /*
  * Displays any command given in history
  */
@@ -13,7 +14,7 @@
 struct list {
     char           *command;
     struct list    *next;
-} head;
+} *head;
 
 void 
 add_command_to_history(char *command)
@@ -38,15 +39,16 @@ add_command_to_history(char *command)
     }
 }
 
-void 
+char *
 check_history(char *buf, int len)
 {
+    char c;
     struct list    *temp = head;
     if (temp) {
 	/*
 	 * There are no commands in the list
 	 */
-	return;
+	return NULL;
     } else {
 	while (temp) {
 	    if (strncmp(buf, temp->command, len - 1)) {
@@ -59,7 +61,7 @@ check_history(char *buf, int len)
 		    continue;
 		} else {
 		    printf("Not a valid command \n");
-		    return;
+		    return NULL;
 		}
 	    } else {
 		temp = temp->next;
@@ -67,6 +69,7 @@ check_history(char *buf, int len)
 	    }
 	}
     }
+    return NULL;
 }
 
 void 
@@ -86,6 +89,7 @@ read_command_line()
 {
     int		buf_size = MAX_COMMAND_LINE_BUF_SIZE;
     char        *buf;
+    char	c; 
     int		index;
 
     buf = malloc(sizeof(char) * buf_size);
@@ -112,7 +116,7 @@ read_command_line()
     }
 }
 
-bool 
+int
 execute_shell_command(char **command)
 {
 
@@ -126,12 +130,22 @@ execute_shell_command(char **command)
 	 * Parent process
 	 */
     }
+    return TRUE;
 }
-
+char ** 
+convert_to_tokens(char *command)
+{
+    /*
+     * Add code to split the line into tokens 
+     */ 
+    return NULL;
+}
 int 
 main()
 {
-    bool    status = TRUE;
+    int  status = TRUE;
+    char * command_line;
+    char ** tokens; 
 
     /*
      * Read the .profile file in the same directory and init shell with
@@ -141,11 +155,9 @@ main()
 
     while (status) {
 	print_shell_prompt();
-
 	command_line = read_command_line();
-
 	add_command_to_history(command_line);
-
-	status = execute_shell_command();
+	tokens = convert_to_tokens(command_line);
+	status = execute_shell_command(tokens);
     }
 }
