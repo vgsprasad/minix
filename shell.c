@@ -3,12 +3,14 @@
 #include<string.h>
 #include<stdlib.h>
 #include<fcntl.h>
+#include<errno.h>
 
 #define MAX_COMMAND_LINE_BUF_SIZE 1024
 
 #define TRUE                      1
 #define FALSE                     0
-
+#define STD_INPUT                 0
+#define STD_OUTPUT                1
 /*
  * Displays any command given in history
  */
@@ -156,7 +158,7 @@ read_command_line()
 	    /*
 	     * Implement tab or history feature here
 	     */
-	//    check_history(buf, index);
+	//check_history(buf, index);
 	} else if ((c == '\n')|| (c == EOF)) {
 	    buf[index] = '\0';
 	    break;
@@ -175,7 +177,7 @@ int
 execute_shell_command(char **command)
 {
 
-    int status;
+    int status, ret;
     pid_t pid ; 
     pid = fork();
     
@@ -185,17 +187,49 @@ execute_shell_command(char **command)
 	/*
 	 * Child process runs the command 
 	 */
-	execvp(command[0], command);
-    }
-    else {
+	ret = execvp(command[0], command);
+	if (ret < 0) { 
+	    printf("Execv failed Errno = %d\n", errno);
+	}
+    } else {
 	/*
 	 * Parent process 
-	 *Wait for child to exit and then return 
+	 * Wait for child to exit and then return 
 	 */
 	waitpid(pid,&status,0);	
     }
     return TRUE;
 }
+int
+execute_shell_command_with_redir(char **command, char* filename)
+{
+
+    int status , fd ,ret ;
+    pid_t pid ; 
+    pid = fork();
+    
+    fd = open (filename, O_RDWR);
+
+    if (pid < 0 ) {
+	printf("Not able to fork a new process \n");
+    } else if (pid == 0) {
+	/*
+	 * Child process runs the command 
+	 */
+	close (STD_OUTPUT);
+	dup (fd);
+	close(fd);
+	ret = execvp(command[0], command);
+	if (ret < 0) { 
+	    printf("Execv failed Errno = %d", errno);
+	}
+    } else {
+
+	waitpid(pid,&status,0);	
+    }
+    return TRUE;
+}
+
 
 /* 
  * From single line command line convert those to tokens with strtok 
@@ -232,6 +266,8 @@ main()
     int  status = TRUE;
     char * command_line;
     char **token; 
+    char *filename;
+    int i=0, num_redir_op =0, redir_index =0;
 
     /*
      * Read the .profile file in the same directory and init shell with
@@ -241,6 +277,7 @@ main()
 
     while (status) {
 	print_shell_prompt();
+	i=redir_index=num_redir_op =0;
 	command_line = read_command_line();
 	// add_command_to_history(command_line);
 	token = malloc (sizeof(char) *1024);
@@ -249,6 +286,32 @@ main()
 	    return 0; 
 	}
         convert_to_tokens(command_line, token);
-	status = execute_shell_command(token);
+
+	while (token[i]) {
+	    if (!strcmp( token[i], ">=")) {
+		/* there is a redirection operator */
+		num_redir_op ++;
+		redir_index = i;
+	    }
+	    i++;
+	}
+	switch( num_redir_op) {
+	case 0:  status = execute_shell_command(token);
+		 break;
+
+	case 1:  if (token[redir_index+2] != NULL) {
+		     printf("After redirection op there should be only one file name\n");
+		     status = TRUE;
+		 } else {
+		     filename = token[redir_index + 1];
+		     token[redir_index] = NULL;
+		     token[redir_index+1] = NULL;
+		     status = execute_shell_command_with_redir(token, filename);
+		 }
+		 break;
+	default:
+		 printf("More than one redirection op's not allowed \n");
+		 break;
+	}
     }
 }
