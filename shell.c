@@ -5,17 +5,28 @@
 #include<fcntl.h>
 
 #define MAX_COMMAND_LINE_BUF_SIZE 1024
+
 #define TRUE                      1
 #define FALSE                     0
+
 /*
  * Displays any command given in history
  */
 
+/*
+ * This list is created to store all the commands which are 
+ * entered during the lifespan of shell
+ * We can store it in FILE too. Design under consideration 
+ */ 
 struct list {
     char           *command;
     struct list    *next;
 } *head;
 
+/*
+ * Once we enter command we store that in the list . 
+ * Routine to add command in the list 
+ */
 void 
 add_command_to_history(char *command)
 {
@@ -39,6 +50,10 @@ add_command_to_history(char *command)
     }
 }
 
+/*
+ * Check for the commands in the list
+ * Not complete yet 
+ */ 
 char *
 check_history(char *buf, int len)
 {
@@ -72,28 +87,65 @@ check_history(char *buf, int len)
     return NULL;
 }
 
+/*
+ * Print the shell prompt 
+ */ 
 void 
 print_shell_prompt()
 {
     printf("%s@%s $:", getlogin(), "SA_SHELL");
 }
 
+/*
+ * It reads the .profile in the current directory and 
+ * changes the current dir to HOME directory mentioned in 
+ * .profile file 
+ */
 void
 read_profile_file()
 {
+    char line[1024];
+    char homedir[1024];
+    char *ptr;
+
+    memset(line,0,1024);
+    memset(homedir,0,1024);
+
+    FILE *fp=fopen(".profile","r");
+
+    if(fp!=NULL){
+	while(fgets(line,1024,fp) != NULL){
+	    printf("%s",line);
+	    if(!strncmp(line,"HOME",4)){
+		ptr=strchr(line,'=');
+		strcpy(homedir,(ptr+1));
+		strtok(homedir,"\n");
+		printf("homedir=%s\n",homedir);
+		if(chdir(homedir) < 0){
+		    perror("homedir");
+		    printf("chdir to %s failed",homedir);
+		}
+	    }
+	}
+	fclose(fp);
+    }else{
+	perror(".profile");
+    }
 
 }
 
+/*
+ * Read one charachter at a time and store it in buf 
+ */
 char*
 read_command_line()
 {
     int		buf_size = MAX_COMMAND_LINE_BUF_SIZE;
     char        *buf;
     char	c; 
-    int		index;
-
-    buf = malloc(sizeof(char) * buf_size);
-    if (buf == NULL) {
+    int		index = 0;
+    buf = (char *) malloc(sizeof(char) * buf_size);
+    if (!buf) {
 	printf(" Memory allocation failure for MALLOC in %s:%d", __FUNCTION__,
 	       __LINE__);
 	return NULL;
@@ -104,48 +156,82 @@ read_command_line()
 	    /*
 	     * Implement tab or history feature here
 	     */
-	    check_history(buf, index);
-	}
-	if (c == '\n') {
+	//    check_history(buf, index);
+	} else if ((c == '\n')|| (c == EOF)) {
 	    buf[index] = '\0';
-	    return buf;
+	    break;
 	} else {
 	    buf[index] = c;
 	}
 	index++;
     }
+    return buf;
 }
 
+/* 
+ * Main function which executes the shell commands by forking child process 
+ */
 int
 execute_shell_command(char **command)
 {
 
-    if (fork()) {
+    int status;
+    pid_t pid ; 
+    pid = fork();
+    
+    if (pid < 0 ) {
+	printf("Not able to fork a new process \n");
+    } else if (pid == 0) {
 	/*
-	 * Child process
+	 * Child process runs the command 
 	 */
 	execvp(command[0], command);
-    } else {
+    }
+    else {
 	/*
-	 * Parent process
+	 * Parent process 
+	 *Wait for child to exit and then return 
 	 */
+	waitpid(pid,&status,0);	
     }
     return TRUE;
 }
-char ** 
-convert_to_tokens(char *command)
+
+/* 
+ * From single line command line convert those to tokens with strtok 
+ * API . 
+ */ 
+void 
+convert_to_tokens(char *line , char ** token )
 {
-    /*
-     * Add code to split the line into tokens 
-     */ 
-    return NULL;
+    int token_index = 0, i=0; 
+    char *temp_token; 
+    
+    /* 
+     * Now we have full command as one line . Lets break those 
+     * into tokens 
+     */
+
+    temp_token = strtok(line, " \n\t");
+    while (temp_token) {
+	token[token_index] = temp_token; 
+	token_index++;
+	temp_token = strtok(NULL, " \n\t");
+    }
+    token [token_index] = NULL;
+    
+
 }
+
+/*
+ * Main function 
+ */
 int 
 main()
 {
     int  status = TRUE;
     char * command_line;
-    char ** tokens; 
+    char **token; 
 
     /*
      * Read the .profile file in the same directory and init shell with
@@ -156,8 +242,13 @@ main()
     while (status) {
 	print_shell_prompt();
 	command_line = read_command_line();
-	add_command_to_history(command_line);
-	tokens = convert_to_tokens(command_line);
-	status = execute_shell_command(tokens);
+	// add_command_to_history(command_line);
+	token = malloc (sizeof(char) *1024);
+	if (token == NULL) {
+	    printf ("Not able to allocate memory for tokens \n");
+	    return 0; 
+	}
+        convert_to_tokens(command_line, token);
+	status = execute_shell_command(token);
     }
 }
