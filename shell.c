@@ -4,6 +4,10 @@
 #include<stdlib.h>
 #include<fcntl.h>
 #include<errno.h>
+#include<signal.h>
+#include<sys/stat.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 
 #define MAX_COMMAND_LINE_BUF_SIZE 1024
 
@@ -11,20 +15,22 @@
 #define FALSE                     0
 #define STD_INPUT                 0
 #define STD_OUTPUT                1
-/*
- * Displays any command given in history
- */
+char *history[1024];
+int history_index =0;
+char * check_history(const char *text, int state);
+static char ** custom_complete_function( char * command ,
+					 int start, int end);
+int enable = TRUE;
+char * dupstr (char* s) {
+    char *r;
 
-/*
- * This list is created to store all the commands which are 
- * entered during the lifespan of shell
- * We can store it in FILE too. Design under consideration 
- */ 
-struct list {
-    char           *command;
-    struct list    *next;
-} *head;
+    r = (char*) malloc ((strlen (s) + 1));
+    strcpy (r, s);
+    return (r);
+}
 
+
+rl_completion_func_t * rl_attempted_completion_function = custom_complete_function;
 /*
  * Once we enter command we store that in the list . 
  * Routine to add command in the list 
@@ -32,24 +38,20 @@ struct list {
 void 
 add_command_to_history(char *command)
 {
-    struct list    *temp;
-    if (!head) {
-	/*
-	 * Means we are inserting first element in history
-	 */
-	temp = (struct list *)malloc(sizeof(struct list));
-	head = temp;
-	head->next = NULL;
-	strcpy(head->command, command);
-    } else {
-	temp = (struct list *)malloc(sizeof(struct list));
-	/*
-	 * Insert the element at head of the list
-	 */
-	temp->next = head;
-	strcpy(temp->command, command);
-	head = temp;
+    char *new_str;
+    int index = 0;
+    /* 
+     * If there is already same command entered earlier 
+     * dont store just return
+     */
+    while (history[index]) {
+	if (!strcmp(history[index], command)) {
+	    return;
+	}
     }
+    new_str = dupstr(command);
+    history[history_index] = new_str; 
+    history_index++;
 }
 
 /*
@@ -57,36 +59,35 @@ add_command_to_history(char *command)
  * Not complete yet 
  */ 
 char *
-check_history(char *buf, int len)
+check_history(const char *text, int state)
 {
-    char c;
-    struct list    *temp = head;
-    if (temp) {
-	/*
-	 * There are no commands in the list
-	 */
-	return NULL;
-    } else {
-	while (temp) {
-	    if (strncmp(buf, temp->command, len - 1)) {
-		//Print the command
-		c = getchar();
-		if (c == '\n') {
-		    return temp->command;
-		} else if (c == '\t') {
-		    temp = temp->next;
-		    continue;
-		} else {
-		    printf("Not a valid command \n");
-		    return NULL;
-		}
-	    } else {
-		temp = temp->next;
-		continue;
-	    }
-	}
+    char *c;
+    static int index, len ;
+    if (!state) {
+	index = 0;
+	len = strlen (text);
     }
-    return NULL;
+
+    while((c = history[index])) {
+	index++;
+
+	if (!strncmp(c, text, len)) {
+	    return dupstr(c);
+	} 
+    }
+    return (char *)NULL;
+}
+static char ** custom_complete_function( char * command , 
+					 int start, int end)
+{
+    char **found ;
+    found =(char **) NULL ;
+    if (start == 0) {
+	found = rl_completion_matches ((char*)command, &check_history);
+    } else {
+	rl_bind_key('\t', rl_insert);
+    }
+    return found;
 }
 
 /*
@@ -137,39 +138,28 @@ read_profile_file()
 }
 
 /*
- * Read one charachter at a time and store it in buf 
+ * Signal handler to handle alarm 
  */
-char*
-read_command_line()
-{
-    int		buf_size = MAX_COMMAND_LINE_BUF_SIZE;
-    char        *buf;
-    char	c; 
-    int		index = 0;
-    buf = (char *) malloc(sizeof(char) * buf_size);
-    if (!buf) {
-	printf(" Memory allocation failure for MALLOC in %s:%d", __FUNCTION__,
-	       __LINE__);
-	return NULL;
+void signal_handler_alarm(int sig){
+    if(sig == SIGALRM) {
+	printf("Command is taking more than 5 seconds \n");
+	printf(" Press ctrl + d to avoid this alarm \n");
+	printf(" And let the program to run \n");
     }
-    while (TRUE) {
-	c = getchar();
-	if (c == '\t') {
-	    /*
-	     * Implement tab or history feature here
-	     */
-	//check_history(buf, index);
-	} else if ((c == '\n')|| (c == EOF)) {
-	    buf[index] = '\0';
-	    break;
-	} else {
-	    buf[index] = c;
-	}
-	index++;
-    }
-    return buf;
 }
 
+void signal_handler_ctrl_d(int sig) {
+    if (sig == SIGQUIT) {
+	printf("Switching alarm feature \n");
+	if(enable ) {
+	    enable = FALSE;
+	    alarm(0);
+	} else {
+	    enable = TRUE; 
+	    alarm(5);
+	}
+    }
+}
 /* 
  * Main function which executes the shell commands by forking child process 
  */
@@ -196,7 +186,16 @@ execute_shell_command(char **command)
 	 * Parent process 
 	 * Wait for child to exit and then return 
 	 */
-	waitpid(pid,&status,0);	
+	if (signal(SIGALRM, signal_handler_alarm) == SIG_ERR) {
+	    perror("SIGALRM");
+	}
+	if (signal(SIGQUIT, signal_handler_ctrl_d) == SIG_ERR) {
+	    perror("SIGQUIT");
+	}
+	/*parent wait for child to complete*/
+	alarm(5);
+	waitpid(pid,&status,0);
+	signal(SIGALRM,SIG_IGN);
     }
     return TRUE;
 }
@@ -208,7 +207,7 @@ execute_shell_command_with_redir(char **command, char* filename)
     pid_t pid ; 
     pid = fork();
     
-    fd = open (filename, O_RDWR);
+    fd = open (filename, O_RDWR | O_CREAT , S_IRWXG|S_IRWXO|S_IRWXU);
 
     if (pid < 0 ) {
 	printf("Not able to fork a new process \n");
@@ -268,7 +267,6 @@ main()
     char **token; 
     char *filename;
     int i=0, num_redir_op =0, redir_index =0;
-
     /*
      * Read the .profile file in the same directory and init shell with
      * path and other environment variables
@@ -278,8 +276,12 @@ main()
     while (status) {
 	print_shell_prompt();
 	i=redir_index=num_redir_op =0;
-	command_line = read_command_line();
-	// add_command_to_history(command_line);
+	command_line = readline ("");
+	/* 
+	 * Call the custom complete function 
+	 */
+	rl_bind_key('\t', rl_complete);
+	add_command_to_history(command_line);
 	token = malloc (sizeof(char) *1024);
 	if (token == NULL) {
 	    printf ("Not able to allocate memory for tokens \n");
