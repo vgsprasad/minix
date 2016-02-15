@@ -6,31 +6,56 @@
 #include<errno.h>
 #include<signal.h>
 #include<sys/stat.h>
-#include <readline/readline.h>
-#include <readline/history.h>
-
+#include<sys/types.h>
+#include<readline/readline.h>
+#include<sys/wait.h>
+#include <termios.h>
 #define MAX_COMMAND_LINE_BUF_SIZE 1024
 
 #define TRUE                      1
 #define FALSE                     0
 #define STD_INPUT                 0
 #define STD_OUTPUT                1
-char *history[1024];
-int history_index =0;
-char * check_history(const char *text, int state);
-static char ** custom_complete_function( char * command ,
-					 int start, int end);
+
+/* 
+ * Global variables 
+ */
+char *command_history[1024] = {0};
+char homedir[1024];
+int  history_index = 0;
+int  almset = 1;
 int enable = TRUE;
+/* 
+ * Function prototypes 
+ */
+void print_shell_prompt(void);
+char * check_history(const char *text, int state);
+char ** custom_complete_function(char * command ,
+				 int start, int end);
+char ** custom_match_function(const char *str, 
+			      rl_compentry_func_t *fun);
+char * dupstr (char* s);
+void convert_to_tokens(char *line , char ** token );
+int  execute_shell_command_with_redir(char **command, 
+				      char* filename);
+int  execute_shell_command(char **command);
+void add_command_to_history(char *command);
+void read_profile_file(void);
+void signal_handler(int sig);
+rl_completion_func_t * 
+rl_attempted_completion_function = custom_complete_function;
+
 char * dupstr (char* s) {
     char *r;
-
     r = (char*) malloc ((strlen (s) + 1));
+    if (r == NULL) {
+	printf("Not able to allocate memory \n");
+	return NULL;
+    }
     strcpy (r, s);
     return (r);
 }
 
-
-rl_completion_func_t * rl_attempted_completion_function = custom_complete_function;
 /*
  * Once we enter command we store that in the list . 
  * Routine to add command in the list 
@@ -38,19 +63,28 @@ rl_completion_func_t * rl_attempted_completion_function = custom_complete_functi
 void 
 add_command_to_history(char *command)
 {
-    char *new_str;
-    int index = 0;
-    /* 
-     * If there is already same command entered earlier 
+    char *new_str = dupstr(command);
+    int index =0;
+    FILE *fp;
+    /*
+     * If there is already same command entered earlier
      * dont store just return
      */
-    while (history[index]) {
-	if (!strcmp(history[index], command)) {
+    while (command_history[index]) {
+	if (!strcmp(command_history[index], command)) {
 	    return;
 	}
+	index++;
     }
-    new_str = dupstr(command);
-    history[history_index] = new_str; 
+    fp = fopen("history","a");
+    if (!fp) {
+	printf(" Could not open history file \n");
+    } else {
+	fputs(new_str, fp);
+	fputs("\n", fp);
+	fclose(fp);
+    }
+    command_history[history_index] = new_str; 
     history_index++;
 }
 
@@ -62,23 +96,24 @@ char *
 check_history(const char *text, int state)
 {
     char *c;
-    static int index, len ;
+    static int index;
+    static int len; 
     if (!state) {
 	index = 0;
 	len = strlen (text);
     }
 
-    while((c = history[index])) {
+    while((c = command_history[index])!= NULL) {
 	index++;
-
 	if (!strncmp(c, text, len)) {
 	    return dupstr(c);
 	} 
     }
     return (char *)NULL;
 }
-static char ** custom_complete_function( char * command , 
-					 int start, int end)
+
+char ** custom_complete_function( char * command , 
+				  int start, int end)
 {
     char **found ;
     found =(char **) NULL ;
@@ -108,7 +143,6 @@ void
 read_profile_file()
 {
     char line[1024];
-    char homedir[1024];
     char *ptr;
 
     memset(line,0,1024);
@@ -136,39 +170,19 @@ read_profile_file()
     }
 
 }
-
-/*
- * Signal handler to handle alarm 
- */
-void signal_handler_alarm(int sig){
-    if(sig == SIGALRM) {
-	printf("Command is taking more than 5 seconds \n");
-	printf(" Press ctrl + d to avoid this alarm \n");
-	printf(" And let the program to run \n");
-    }
-}
-
-void signal_handler_ctrl_d(int sig) {
-    if (sig == SIGQUIT) {
-	printf("Switching alarm feature \n");
-	if(enable ) {
-	    enable = FALSE;
-	    alarm(0);
-	} else {
-	    enable = TRUE; 
-	    alarm(5);
-	}
-    }
-}
 /* 
  * Main function which executes the shell commands by forking child process 
  */
 int
 execute_shell_command(char **command)
 {
-
-    int status, ret;
+    int status; 
+    int ret;
     pid_t pid ; 
+
+    /*
+     * Fork a new process 
+     */
     pid = fork();
     
     if (pid < 0 ) {
@@ -179,23 +193,20 @@ execute_shell_command(char **command)
 	 */
 	ret = execvp(command[0], command);
 	if (ret < 0) { 
-	    printf("Execv failed Errno = %d\n", errno);
+	    printf("Command failed = %d\n", errno);
 	}
     } else {
+	if(signal(SIGALRM,signal_handler) == SIG_ERR)
+	    perror("SIGALRM");
+	if(almset)
+	    alarm(5);
 	/*
 	 * Parent process 
 	 * Wait for child to exit and then return 
 	 */
-	if (signal(SIGALRM, signal_handler_alarm) == SIG_ERR) {
-	    perror("SIGALRM");
-	}
-	if (signal(SIGQUIT, signal_handler_ctrl_d) == SIG_ERR) {
-	    perror("SIGQUIT");
-	}
-	/*parent wait for child to complete*/
-	alarm(5);
 	waitpid(pid,&status,0);
-	signal(SIGALRM,SIG_IGN);
+	if(almset)
+	    alarm(0);
     }
     return TRUE;
 }
@@ -203,8 +214,13 @@ int
 execute_shell_command_with_redir(char **command, char* filename)
 {
 
-    int status , fd ,ret ;
-    pid_t pid ; 
+    int status;
+    int fd;
+    int ret;
+    pid_t pid ;
+    /*
+     * Fork a new process for redirection op 
+     */
     pid = fork();
     
     fd = open (filename, O_RDWR | O_CREAT , S_IRWXG|S_IRWXO|S_IRWXU);
@@ -220,15 +236,23 @@ execute_shell_command_with_redir(char **command, char* filename)
 	close(fd);
 	ret = execvp(command[0], command);
 	if (ret < 0) { 
-	    printf("Execv failed Errno = %d", errno);
+	    printf("Command failed errno = %d", errno);
 	}
     } else {
-
-	waitpid(pid,&status,0);	
+	if(signal(SIGALRM,signal_handler) == SIG_ERR)
+	    perror("SIGALRM");
+	if(almset)
+	    alarm(5);
+	/*
+	 * Parent process 
+	 * Wait for child to exit and then return 
+	 */
+	waitpid(pid,&status,0);
+	if(almset)
+	    alarm(0);
     }
     return TRUE;
 }
-
 
 /* 
  * From single line command line convert those to tokens with strtok 
@@ -237,7 +261,7 @@ execute_shell_command_with_redir(char **command, char* filename)
 void 
 convert_to_tokens(char *line , char ** token )
 {
-    int token_index = 0, i=0; 
+    int  token_index = 0; 
     char *temp_token; 
     
     /* 
@@ -256,6 +280,28 @@ convert_to_tokens(char *line , char ** token )
 
 }
 
+void signal_handler(int sig)
+{
+    if(sig == SIGALRM) {
+	printf("5 secs over ,do u want to terminate command \n");
+    }
+    else if(sig == SIGINT){
+	if (almset==0) {
+	    almset=1;
+	} else {
+	    almset=0;
+	}
+    }
+}
+int find_num_tokens(char **token)
+{
+    int index = 0;
+    while(token[index]) {
+	index++;
+    }
+    return index;
+}
+
 /*
  * Main function 
  */
@@ -266,7 +312,21 @@ main()
     char * command_line;
     char **token; 
     char *filename;
-    int i=0, num_redir_op =0, redir_index =0;
+    int index=0;
+    int num_redir_op =0; 
+    int redir_index =0;
+    int num_tokens;
+    struct termios oldterm;
+    struct termios newterm;
+    tcgetattr(0,&oldterm);
+
+    signal(SIGINT,signal_handler);
+
+    newterm=oldterm;
+    newterm.c_cc[VEOF] = 3;
+    newterm.c_cc[VINTR] = 4;
+    tcsetattr(0,TCSANOW,&newterm);
+
     /*
      * Read the .profile file in the same directory and init shell with
      * path and other environment variables
@@ -275,7 +335,9 @@ main()
 
     while (status) {
 	print_shell_prompt();
-	i=redir_index=num_redir_op =0;
+	index = 0;
+	redir_index  = 0;
+	num_redir_op = 0;
 	command_line = readline ("");
 	/* 
 	 * Call the custom complete function 
@@ -288,14 +350,35 @@ main()
 	    return 0; 
 	}
         convert_to_tokens(command_line, token);
+	num_tokens = find_num_tokens(token);
 
-	while (token[i]) {
-	    if (!strcmp( token[i], ">=")) {
+	if (num_tokens == 0) {
+	    /*
+	     * Nothing entered in shell so continue 
+	     */
+	    continue;
+	}
+	if (!strncmp(token[0], "cd", 2)) 
+	{
+	    switch (num_tokens) {
+	    case 1: chdir(homedir);
+		    break;
+	    case 2: if (chdir(token[1])) {
+			printf(" Dir change not successfull errno =%d\n", errno);
+		    }
+		    break;
+	    default:printf("command cd should have <= 1 operand\n");
+		    break;
+	    }
+	    continue;
+	}
+	while (token[index]) {
+	    if (!strcmp( token[index], ">=")) {
 		/* there is a redirection operator */
 		num_redir_op ++;
-		redir_index = i;
+		redir_index = index;
 	    }
-	    i++;
+	    index++;
 	}
 	switch( num_redir_op) {
 	case 0:  status = execute_shell_command(token);
