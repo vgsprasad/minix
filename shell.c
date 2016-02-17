@@ -28,12 +28,11 @@ int enable = TRUE;
 /* 
  * Function prototypes 
  */
+int find_num_tokens(char **token);
 void print_shell_prompt(void);
 char * check_history(const char *text, int state);
-char ** custom_complete_function(char * command ,
+char ** custom_complete_function(const char * command ,
 				 int start, int end);
-char ** custom_match_function(const char *str, 
-			      rl_compentry_func_t *fun);
 char * dupstr (char* s);
 void convert_to_tokens(char *line , char ** token );
 int  execute_shell_command_with_redir(char **command, 
@@ -41,10 +40,7 @@ int  execute_shell_command_with_redir(char **command,
 int  execute_shell_command(char **command);
 void add_command_to_history(char *command);
 void read_profile_file(void);
-void signal_handler(int sig);
-rl_completion_func_t * 
-rl_attempted_completion_function = custom_complete_function;
-
+void signal_handler(int sig); 
 char * dupstr (char* s) {
     char *r;
     r = (char*) malloc ((strlen (s) + 1));
@@ -112,13 +108,13 @@ check_history(const char *text, int state)
     return (char *)NULL;
 }
 
-char ** custom_complete_function( char * command , 
+char ** custom_complete_function( const char * command , 
 				  int start, int end)
 {
     char **found ;
     found =(char **) NULL ;
     if (start == 0) {
-	found = rl_completion_matches ((char*)command, &check_history);
+	found = rl_completion_matches((char*)command, &check_history);
     } else {
 	rl_bind_key('\t', rl_insert);
     }
@@ -318,6 +314,7 @@ main()
     int num_tokens;
     struct termios oldterm;
     struct termios newterm;
+    rl_attempted_completion_function = custom_complete_function;
     tcgetattr(0,&oldterm);
 
     signal(SIGINT,signal_handler);
