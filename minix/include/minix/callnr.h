@@ -118,7 +118,14 @@
 #define VFS_COPYFD		(VFS_BASE + 46)
 #define VFS_CHECKPERMS		(VFS_BASE + 47)
 #define VFS_GETSYSINFO		(VFS_BASE + 48)
+#define VFS_MQ_SEND             (VFS_BASE + 49)
+#define VFS_MQ_RECEIVE          (VFS_BASE + 50)
+#define VFS_MQ_OPEN             (VFS_BASE + 51)
+#define VFS_MQ_CLOSE            (VFS_BASE + 52)
+#define VFS_MQ_GETATTR	        (VFS_BASE + 53)
+#define VFS_MQ_SETATTR	        (VFS_BASE + 54)
+#define VFS_REQ_MQ_NOTIFY       (VFS_BASE + 55)
 
-#define NR_VFS_CALLS		49	/* highest number from base plus one */
+#define NR_VFS_CALLS		56	/* highest number from base plus one */
 
 #endif /* !_MINIX_CALLNR_H */

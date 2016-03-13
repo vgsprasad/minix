@@ -65,4 +65,11 @@ int (* const call_vec[NR_VFS_CALLS])(void) = {
 	CALL(VFS_COPYFD)	= do_copyfd,		/* copyfd(2) */
 	CALL(VFS_CHECKPERMS)	= do_checkperms,	/* checkperms(2) */
 	CALL(VFS_GETSYSINFO)	= do_getsysinfo,	/* getsysinfo(2) */
+	CALL(VFS_MQ_SEND)       = do_mq_send,           /* mq_send(2) */
+	CALL(VFS_MQ_RECEIVE)    = do_mq_receive,        /* mq_receive(2) */
+	CALL(VFS_MQ_OPEN)       = do_mq_open,           /* mq_open(2) */
+	CALL(VFS_MQ_CLOSE)      = do_mq_close,          /* mq_close(2) */ 
+	CALL(VFS_MQ_GETATTR)    = do_mq_getattr,        /* mq_getattr(2) */ 
+	CALL(VFS_MQ_SETATTR)    = do_mq_setattr,        /* mq_setattr(2) */ 
+	CALL(VFS_REQ_MQ_NOTIFY) = do_req_mq_notify,     /* req_mq_notify(2) */ 
 };
