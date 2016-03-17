@@ -353,8 +353,7 @@ int do_mq_send(void);
 int do_mq_receive(void);
 int do_mq_open(void);
 int do_mq_close(void);
-int do_mq_getattr(void); 
-int do_mq_setattr(void); 
+int do_mq_getattr(void);
+int do_mq_setattr(void);
 int do_req_mq_notify(void);
-
 #endif
