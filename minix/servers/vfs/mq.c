@@ -25,26 +25,30 @@
 #define INVALID_RECVR 0
 #define MAX_MQ 100
 
+int global_mq_count = 0; 
+
 struct message_queue {
     char *name;
     int mq_id;
     int max_msg;
     int blocking;
     struct message *head;
-}*mq[MAX_MQ];
+};
+
+struct message_queue *mq[MAX_MQ];
 
 struct message {
     char *msg;
     int prio;
     int seq_num;
     int sender;
-    int recv_list[MAX_RECVR];
+    int recv_id;
     struct message *next;
 };
 
 /* prototypes */
-void
-add_message_to_queue(int mq_id, char *message, int sender, int recv_id[],
+int 
+add_message_to_queue(int mq_id, char *message, int sender, int recv_id,
 		     int prio);
 int do_mq_send(void);
 int do_mq_receive(void);
@@ -64,17 +68,20 @@ struct message_queue * get_message_queue(int mq_id );
  *===========================================================================*/
 int do_mq_send(void)
 {
-    char message[100];
+    int ret_val;
+    char *message = NULL;
     printf("Called mq_send \n");
     /*Initialize based on the arguments passed */
     int mq_id = m_in.m1_i1; 
     int sender_id = m_in.m1_i2;
-    int recv_id[MAX_RECVR] = {0};
+    int recv_id = 1;
     int prio = m_in.m1_i3;
-    strcpy(message, m_in.m1_p1);
+    printf(" Message sent from application = %s \n", m_in.m1_p1);
+    strlcpy(message, m_in.m1_p1, 10 );
 
-    add_message_to_queue(mq_id, message, sender_id, recv_id, prio);
-    return 1;
+    printf(" Call add_message_to_queue \n");
+    ret_val = add_message_to_queue(mq_id, message, sender_id, recv_id, prio);
+    return ret_val;
 }
 
 
@@ -86,28 +93,34 @@ int do_mq_receive(void)
     int mq_id;
     struct message *temp ;
     struct message_queue *temp_mq;
+    int recv_id ;
+    
 
     mq_id = m_in.m1_i1;
-    int recv_id = 1;
+    recv_id = m_in.m1_i2;
     temp_mq = get_message_queue(mq_id);
 
+    if (temp_mq == NULL ) { 
+	printf(" Unable to get message queue id \n");
+	return -1;
+    }
     temp = temp_mq->head ;
 
-    while (temp )
+    while (temp)
     {
-	int index = 0;
-
-	for(;index < MAX_RECVR; index++)
-	{
-	    if (temp->recv_list[index] == recv_id ) {
-		temp->recv_list[index] = INVALID_RECVR;
-		check_message_for_deletion(temp_mq, temp);
-		//return temp->msg;
-	    }
+	/*
+	 * If receiver list is allowed loop here 
+	 */
+	if (temp->recv_id == recv_id ) {
+	    //temp->recv_list[index] = INVALID_RECVR;
+	    //check_message_for_deletion(temp_mq, temp);
+	    printf("Found message %s  \n", temp->msg);
+	    m_in.m1_p1 = temp->msg;
+	    break;
 	}
 	temp = temp ->next;
     }
-    return 0;
+    return -1;
 }
 
 /*===========================================================================*
@@ -126,14 +139,17 @@ int do_mq_open(void)
     mq[mq_id] = (struct message_queue *) malloc(sizeof(struct message_queue));
     if (mq[mq_id] == NULL) {
 	printf(" Unable to allocate memory \n");
-	return 0;
+	return -1;
     }
 
+    printf(" created new message queue \n");
+    global_mq_count++;
     mq[mq_id]->mq_id = mq_id;
-    strcpy(mq[mq_id]->name, m_in.m1_p1);
+    //strcpy(mq[mq_id]->name, m_in.m1_p1);
     mq[mq_id]->max_msg = m_in.m1_i2;
     mq[mq_id]->blocking = blocking;
 
+    printf(" Return mq_id \n");
     return mq_id;
     
 }
@@ -147,12 +163,14 @@ int do_mq_close(void)
     struct message_queue *temp_mq;
     temp_mq = get_message_queue(mq_id);
     if (!temp_mq) {
-	return 0;
+	printf(" Mq id not found return error \n");
+	return -1;
     }
 
     /*
      * Add a code to NULLify mq[index] otherwise it might core .
      */
+    printf(" free message queue \n");
     free(temp_mq) ;
     return 1;
 }
@@ -209,17 +227,19 @@ struct message_queue *
 get_message_queue(int mq_id )
 {
     int index = 0;
-    while ((index < MAX_MQ))
+    while ((index < global_mq_count))
     {
 	if (mq[index]->mq_id == mq_id) {
+	    printf("Found a message queue \n");
 	    return mq[index];
 	}
 	index++;
     }
     return NULL;
 }
-void
-add_message_to_queue(int mq_id, char *message, int sender, int recv_id[] __unused,
+
+int
+add_message_to_queue(int mq_id, char *message, int sender, int recv_id,
 		     int prio)
 {
     struct message *temp , *temp1;
@@ -229,22 +249,25 @@ add_message_to_queue(int mq_id, char *message, int sender, int recv_id[] __unuse
     temp_mq = get_message_queue(mq_id);
     if (!temp_mq) {
 	printf("Unable to add message to message queue . Wrong mq_id \n");
-	return ;
+	return -1;
     }
 
     temp = (struct message *)malloc(sizeof(struct message *));
     if (!temp ) {
 	printf("Unable to allocate memory for message \n");
-	return ;
+	return -1;
     }
+    printf(" Message stored in the node = %s", message);
     temp->msg  = message;
     temp->prio = prio;
     temp->seq_num = seq_num++;
     temp->sender = sender;
     temp->next = NULL;
+    temp->recv_id = recv_id;
 
+    printf(" Temporary message created with the values sent \n");
     temp1 = temp_mq->head;
-    if (temp1 != NULL) {
+    if (temp1 == NULL) {
 	temp_mq->head = temp;
     } else {
 	while (temp1->next) {
@@ -252,6 +275,8 @@ add_message_to_queue(int mq_id, char *message, int sender, int recv_id[] __unuse
 	}
 	temp1->next =temp;
     }
+    printf(" Stored the message in message queue now return \n");
+    return 0;
 }
 
 void delete_message_from_queue(struct message_queue *temp_mq,
@@ -274,7 +299,7 @@ void delete_message_from_queue(struct message_queue *temp_mq,
 	free(temp);
     }
 }
-
+#if 0
 void check_message_for_deletion (struct message_queue * temp_mq,
 				struct message *temp )
 {
@@ -291,4 +316,5 @@ void check_message_for_deletion (struct message_queue * temp_mq,
     }
     delete_message_from_queue(temp_mq, temp);
 }
+#endif 
 
