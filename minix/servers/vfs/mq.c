@@ -28,7 +28,7 @@
 int global_mq_count = 0; 
 
 struct message_queue {
-    char *name;
+    char name[32];
     int mq_id;
     int max_msg;
     int blocking;
@@ -38,7 +38,7 @@ struct message_queue {
 struct message_queue *mq[MAX_MQ];
 
 struct message {
-    char *msg;
+    char msg[32];
     int prio;
     int seq_num;
     int sender;
@@ -48,7 +48,7 @@ struct message {
 
 /* prototypes */
 int 
-add_message_to_queue(int mq_id, char *message, int sender, int recv_id,
+add_message_to_queue(int mq_id, int sender, int recv_id,
 		     int prio);
 int do_mq_send(void);
 int do_mq_receive(void);
@@ -69,18 +69,17 @@ struct message_queue * get_message_queue(int mq_id );
 int do_mq_send(void)
 {
     int ret_val;
-    char *message = NULL;
     printf("Called mq_send \n");
     /*Initialize based on the arguments passed */
-    int mq_id = m_in.m1_i1; 
-    int sender_id = m_in.m1_i2;
-    int recv_id = 1;
-    int prio = m_in.m1_i3;
-    printf(" Message sent from application = %s \n", m_in.m1_p1);
-    strlcpy(message, m_in.m1_p1, 10 );
+    int mq_id, recv_id, prio, sender_id; 
+
+    mq_id = m_in.m_mq_send.mqid;
+    recv_id = m_in.m_mq_send.recv;
+    prio = m_in.m_mq_send.prio;
+    sender_id = m_in.m_mq_send.sender_id;
 
     printf(" Call add_message_to_queue \n");
-    ret_val = add_message_to_queue(mq_id, message, sender_id, recv_id, prio);
+    ret_val = add_message_to_queue(mq_id, sender_id, recv_id, prio);
     return ret_val;
 }
 
@@ -96,8 +95,8 @@ int do_mq_receive(void)
     int recv_id ;
     
 
-    mq_id = m_in.m1_i1;
-    recv_id = m_in.m1_i2;
+    mq_id = m_in.m_mq_receive.mqid;
+    recv_id = m_in.m_mq_receive.recv_id;
     temp_mq = get_message_queue(mq_id);
 
     if (temp_mq == NULL ) { 
@@ -115,8 +114,8 @@ int do_mq_receive(void)
 	    //temp->recv_list[index] = INVALID_RECVR;
 	    //check_message_for_deletion(temp_mq, temp);
 	    printf("Found message %s  \n", temp->msg);
-	    m_in.m1_p1 = temp->msg;
-	    break;
+	    strcpy(job_m_out.m_mq_receive.message, temp->msg);
+	    return 0;
 	}
 	temp = temp ->next;
     }
@@ -130,6 +129,13 @@ int do_mq_open(void)
 {
     static int mq_id = -1;
     int blocking = 0;
+    int index =0;
+
+    for (index =0; index < global_mq_count; index++) {
+	if (!strcmp(mq[index]->name, m_in.m_mq_open.name)) {
+	    return mq[index]->mq_id;
+	}
+    }
 
     mq_id++;
 
@@ -145,11 +151,11 @@ int do_mq_open(void)
     printf(" created new message queue \n");
     global_mq_count++;
     mq[mq_id]->mq_id = mq_id;
-    //strcpy(mq[mq_id]->name, m_in.m1_p1);
-    mq[mq_id]->max_msg = m_in.m1_i2;
+    mq[mq_id]->max_msg = m_in.m_mq_open.max_msg;
+    strcpy(mq[mq_id]->name, m_in.m_mq_open.name); 
     mq[mq_id]->blocking = blocking;
-
-    printf(" Return mq_id \n");
+    mq[mq_id]->head = NULL;
+    printf(" Return mq_id  %d \n", mq_id);
     return mq_id;
     
 }
@@ -159,7 +165,7 @@ int do_mq_open(void)
  *===========================================================================*/
 int do_mq_close(void)
 {
-    int mq_id = m_in.m1_i1;
+    int mq_id = m_in.m_mq_close.mqid;
     struct message_queue *temp_mq;
     temp_mq = get_message_queue(mq_id);
     if (!temp_mq) {
@@ -239,7 +245,7 @@ get_message_queue(int mq_id )
 }
 
 int
-add_message_to_queue(int mq_id, char *message, int sender, int recv_id,
+add_message_to_queue(int mq_id, int sender, int recv_id,
 		     int prio)
 {
     struct message *temp , *temp1;
@@ -257,23 +263,27 @@ add_message_to_queue(int mq_id, char *message, int sender, int recv_id,
 	printf("Unable to allocate memory for message \n");
 	return -1;
     }
-    printf(" Message stored in the node = %s", message);
-    temp->msg  = message;
+    strcpy(temp->msg, m_in.m_mq_send.message);
     temp->prio = prio;
     temp->seq_num = seq_num++;
     temp->sender = sender;
-    temp->next = NULL;
     temp->recv_id = recv_id;
+    temp->next = NULL;
 
     printf(" Temporary message created with the values sent \n");
     temp1 = temp_mq->head;
     if (temp1 == NULL) {
 	temp_mq->head = temp;
+	printf(" First message %u\n", (unsigned int )temp_mq->head);
     } else {
-	while (temp1->next) {
+	printf(" temp1 = %u \n", (unsigned int )temp1);
+	while (temp1->next != NULL) {
+	    printf("While loop \n");
 	    temp1 = temp1->next;
 	}
-	temp1->next =temp;
+	if (temp1 != NULL) {
+	    temp1->next =temp;
+	}
     }
     printf(" Stored the message in message queue now return \n");
     return 0;

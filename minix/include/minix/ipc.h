@@ -1995,6 +1995,37 @@ typedef struct {
 _ASSERT_MSG_SIZE(mess_vmmcp_reply);
 
 typedef struct {
+	char name[32];
+	int  max_msg;
+	u_int8_t padding[20];
+}mess_lsys_krn_sys_mq_open;
+_ASSERT_MSG_SIZE(mess_lsys_krn_sys_mq_open);
+
+typedef struct { 
+	int mqid;
+	u_int8_t padding[52];
+}mess_lsys_krn_sys_mq_close;
+_ASSERT_MSG_SIZE(mess_lsys_krn_sys_mq_close);
+
+typedef struct {
+	int mqid;
+	char message[32]; 
+	int prio; 
+	endpoint_t recv;
+	int sender_id;
+	u_int8_t padding[8];	
+}mess_lsys_krn_sys_mq_send;
+_ASSERT_MSG_SIZE(mess_lsys_krn_sys_mq_send);
+
+typedef struct {
+	int mqid; 
+	char message[32];
+	endpoint_t recv_id;
+	u_int8_t padding[16];
+}mess_lsys_krn_sys_mq_receive;
+_ASSERT_MSG_SIZE(mess_lsys_krn_sys_mq_receive);
+
+typedef struct {
 	endpoint_t m_source;		/* who sent the message */
 	int m_type;			/* what kind of message is it */
 	union {
@@ -2136,6 +2167,10 @@ typedef struct {
 		mess_lsys_krn_sys_umap	m_lsys_krn_sys_umap;
 		mess_lsys_krn_sys_vdevio m_lsys_krn_sys_vdevio;
 		mess_lsys_krn_sys_vumap m_lsys_krn_sys_vumap;
+		mess_lsys_krn_sys_mq_open m_mq_open;
+		mess_lsys_krn_sys_mq_close m_mq_close;
+		mess_lsys_krn_sys_mq_send m_mq_send;
+		mess_lsys_krn_sys_mq_receive m_mq_receive;
 		mess_lsys_kern_vsafecopy m_lsys_kern_vsafecopy;
 		mess_lsys_pci_busc_get_bar m_lsys_pci_busc_get_bar;
 		mess_lsys_pm_getepinfo	m_lsys_pm_getepinfo;

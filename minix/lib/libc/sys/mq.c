@@ -8,12 +8,13 @@
 
 int mq_open (char *, int );
 int mq_close (int);
-int mq_send (char *, int, int, int *,int);
+int mq_send (char *, int, int, int ,int);
 char *mq_receive (int, int);
 int mq_setattr (int, int, int);
 int mq_getattr (int);
 int mq_reqnotify(int, int);
 
+char ret_msg[32];
 /*
  * Returns mq_id 
  * If its -1 then mq_open failed 
@@ -21,10 +22,8 @@ int mq_reqnotify(int, int);
 int mq_open(char *mqname, int max_msg)
 {
     message m;
-    m.m1_i1 = strlen(mqname) + 1;
-    m.m1_i2 = max_msg;
-    m.m1_p1 = (char *)mqname;
-
+    strcpy(m.m_mq_open.name, mqname);
+    m.m_mq_open.max_msg = max_msg;
     return(_syscall(VFS_PROC_NR, VFS_MQ_OPEN, &m));
 }
 
@@ -35,7 +34,7 @@ int mq_open(char *mqname, int max_msg)
 int mq_close(int mqid)
 {
     message m;
-    m.m1_i1 = mqid;
+    m.m_mq_close.mqid = mqid;
 
     return(_syscall(VFS_PROC_NR, VFS_MQ_CLOSE, &m));
 }
@@ -44,14 +43,14 @@ int mq_close(int mqid)
  * 0 for success 
  */
 int mq_send(char *msg, int mqid, 
-	    int sender_id , int *recv_list, int prio)
+	    int sender_id , int recv, int prio)
 {
     message m;
-    m.m1_i1 = mqid;
-    strlcpy(m.m1_p1, msg, strlen(msg)+1);
-    m.m1_i2 = sender_id;
-    m.m1_i3 = prio;
-
+    m.m_mq_send.mqid = mqid;
+    strcpy(m.m_mq_send.message, msg); 
+    m.m_mq_send.sender_id = sender_id;
+    m.m_mq_send.prio = prio;
+    m.m_mq_send.recv = recv; 
 
     printf("LIB: message = %s \n", msg);
     /* 
@@ -65,15 +64,17 @@ char * mq_receive(int mqid , int recv_id)
 {
     message m;
     int r;
-    m.m1_i1 = mqid;
-    m.m1_i2 = recv_id;
+    m.m_mq_receive.mqid = mqid; 
+    m.m_mq_receive.recv_id = recv_id;
 
     r = _syscall(VFS_PROC_NR, VFS_MQ_RECEIVE, &m);
-    if(r != 0)
+    if (r < 0) {
 	return NULL;
+    }
 
-    return(char *)m.m1_p1;
-
+    printf("LIB: Message received = %s\n", m.m_mq_receive.message);
+    strcpy(ret_msg, m.m_mq_receive.message);
+    return ret_msg;
 }
 
 int mq_setattr(int mqid, int maxmsgno, int blocking)
