@@ -4,7 +4,7 @@
 #include <string.h>
 #include<stdio.h>
 #include <unistd.h>
-#include "mq.h"
+#include "lib_mq.h"
 
 int mq_open (char *, int );
 int mq_close (int);

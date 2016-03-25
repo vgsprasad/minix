@@ -63,10 +63,6 @@ int do_mq_close(void);
 int do_mq_setattr(void);
 int do_mq_getattr(void);
 int do_req_mqnotify(void);
-void check_message_for_deletion(struct message_queue *temp_mq,
-				struct message *temp);
-void delete_message_from_queue(struct message_queue *temp_mq,
-			       struct message *temp );
 struct message_queue * get_message_queue(int mq_id );
 
 /*===========================================================================*
