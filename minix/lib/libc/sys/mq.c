@@ -11,7 +11,7 @@ int mq_close (int);
 int mq_send (char *, int, int, int ,int);
 char *mq_receive (int, int);
 int mq_setattr (int, int, int);
-int mq_getattr (int);
+int mq_getattr (int );
 int mq_reqnotify(int, int);
 
 char ret_msg[32];
@@ -78,19 +78,22 @@ char * mq_receive(int mqid , int recv_id)
 int mq_setattr(int mqid, int maxmsgno, int blocking)
 {
     message m;
-    m.m1_i1 = mqid;
-    m.m1_i2 = maxmsgno;
-    m.m1_i3 = blocking;
+    m.m_mq_setattr.mqid     = mqid;
+    m.m_mq_setattr.max_msg  = maxmsgno;
+    m.m_mq_setattr.blocking = blocking;
 
     return(_syscall(VFS_PROC_NR, VFS_MQ_SETATTR, &m));
 }
 
 int mq_getattr(int mqid)
 {
+    int r;
     message m;
-    m.m1_i1 = mqid;
-
-    return(_syscall(VFS_PROC_NR, VFS_MQ_GETATTR, &m));
+    m.m_mq_getattr.mqid = mqid;
+    r = _syscall(VFS_PROC_NR, VFS_MQ_GETATTR, &m); 
+    printf ("Maximum message for this queue = %d blocking = %s\n",
+	    m.m_mq_getattr.max_msg , m.m_mq_getattr.blocking ? "yes":"no");
+    return r;
 }
 
 int mq_reqnotify(int pid, int mqid)
