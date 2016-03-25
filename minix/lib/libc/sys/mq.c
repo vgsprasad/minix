@@ -52,7 +52,6 @@ int mq_send(char *msg, int mqid,
     m.m_mq_send.prio = prio;
     m.m_mq_send.recv = recv; 
 
-    printf("LIB: message = %s \n", msg);
     /* 
      * Send recvr list also 
      */
@@ -72,7 +71,6 @@ char * mq_receive(int mqid , int recv_id)
 	return NULL;
     }
 
-    printf("LIB: Message received = %s\n", m.m_mq_receive.message);
     strcpy(ret_msg, m.m_mq_receive.message);
     return ret_msg;
 }
