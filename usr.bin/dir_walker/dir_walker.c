@@ -36,14 +36,14 @@ void dir_walker(char *dir_name)
 	    /*
 	     * If this is current directory dont to recursion 
 	     */
-	    if (dir_entry->d_name == ".") 
+	    if (!(strcmp(dir_entry->d_name == "."))) 
 	    {
 		continue; 
 	    }
 	    /* 
 	     * If its previous directory again dont do recursion 
 	     */
-	    if (dir_entry->d_name == "..") 
+	    if (!(strcmp(dir_entry->d_name == ".."))) 
 	    {
 		continue;
 	    }
