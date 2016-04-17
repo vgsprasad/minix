@@ -246,6 +246,7 @@ int req_unmount(endpoint_t fs_e);
 int req_utime(endpoint_t fs_e, ino_t inode_nr, struct timespec * actv,
 	struct timespec * modtv);
 int req_newdriver(endpoint_t fs_e, dev_t dev, char *label);
+int dump_zone_info(endpoint_t fs_e, uint64_t num);
 
 /* stadir.c */
 int do_chdir(void);
@@ -356,4 +357,5 @@ int do_mq_close(void);
 int do_mq_getattr(void);
 int do_mq_setattr(void);
 int do_req_mq_notify(void);
+int do_dump_zone_info(void);
 #endif

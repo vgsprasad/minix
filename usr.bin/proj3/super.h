@@ -1,26 +1,6 @@
 #ifndef __MFS_SUPER_H__
 #define __MFS_SUPER_H__
 
-/* Super block table.  The root file system and every mounted file system
- * has an entry here.  The entry holds information about the sizes of the bit
- * maps and inodes.  The s_ninodes field gives the number of inodes available
- * for files and directories, including the root directory.  Inode 0 is 
- * on the disk, but not used.  Thus s_ninodes = 4 means that 5 bits will be
- * used in the bit map, bit 0, which is always 1 and not used, and bits 1-4
- * for files and directories.  The disk layout is:
- *
- *    Item        # blocks
- *    boot block      1
- *    super block     1    (offset 1kB)
- *    inode map     s_imap_blocks
- *    zone map      s_zmap_blocks
- *    inodes        (s_ninodes + 'inodes per block' - 1)/'inodes per block'
- *    unused        whatever is needed to fill out the current zone
- *    data zones    (s_zones - s_firstdatazone) << s_log_zone_size
- *
- * A super_block slot is free if s_dev == NO_DEV. 
- */
-
 EXTERN struct super_block {
   u32_t s_ninodes;		/* # usable inodes on the minor device */
   zone1_t  s_nzones;		/* total device size, including bit maps etc */
@@ -39,12 +19,6 @@ EXTERN struct super_block {
   unsigned short s_block_size;	/* block size in bytes. */
   char s_disk_version;		/* filesystem format sub-version */
 
-  /* The following items are only used when the super_block is in memory.
-   * If this ever changes, i.e. more fields after s_disk_version has to go to
-   * disk, update LAST_ONDISK_FIELD in super.c as that controls which part of the
-   * struct is copied to and from disk.
-   */
-  
   /*struct inode *s_isup;*/	/* inode for root dir of mounted file sys */
   /*struct inode *s_imount;*/   /* inode mounted on */
   unsigned s_inodes_per_block;	/* precalculated from magic number */

@@ -125,7 +125,8 @@
 #define VFS_MQ_GETATTR	        (VFS_BASE + 53)
 #define VFS_MQ_SETATTR	        (VFS_BASE + 54)
 #define VFS_REQ_MQ_NOTIFY       (VFS_BASE + 55)
+#define VFS_DUMP_ZONE_INFO      (VFS_BASE + 56)
 
-#define NR_VFS_CALLS		56	/* highest number from base plus one */
+#define NR_VFS_CALLS		57	/* highest number from base plus one */
 
 #endif /* !_MINIX_CALLNR_H */

@@ -190,6 +190,28 @@ int do_fstat(void)
 
   return(r);
 }
+/*===========================================================================*
+ *				do_fstat				     *
+ *===========================================================================*/
+int do_dump_zone_info(void)
+{
+  register struct filp *rfilp;
+  int  rfd;
+  uint64_t num; 
+
+  rfd = job_m_in.m_vfs_fs_dump_zone_info.fd;
+  num = job_m_in.m_vfs_fs_dump_zone_info.num;
+  /* Is the file descriptor valid? */
+  if ((rfilp = get_filp(rfd, VNODE_READ)) == NULL) return(err_code);
+
+  dump_zone_info(rfilp->filp_vno->v_fs_e, num);
+
+  unlock_filp(rfilp);
+
+  return(1);
+}
+
+
 
 /*===========================================================================*
  *				update_statvfs				     *

@@ -17,9 +17,10 @@ int main()
     int index;
     char *ptr;
     fd = open("/dev/c0d0p2",O_RDONLY);
-    lseek(fd,1024,SEEK_CUR);
+    lseek(fd,1024,SEEK_SET);
     n = read(fd,&sb,sizeof(struct super_block ));
-    lseek(fd,sizeof(struct super_block) + 1024 ,SEEK_SET);
+    lseek(fd, sizeof(struct super_block) + 1024 + (sb.s_block_size*sb.s_imap_blocks), 
+	  SEEK_SET);
 
     zmapsize = sb.s_zmap_blocks;
     blksize = sb.s_block_size;

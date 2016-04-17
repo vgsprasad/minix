@@ -2042,6 +2042,13 @@ typedef struct {
 _ASSERT_MSG_SIZE(mess_lsys_krn_sys_mq_setattr);
 
 typedef struct {
+        ino_t num;
+	int fd;
+	u_int8_t padding[44];
+}mess_vfs_fs_dump_zone_info;
+_ASSERT_MSG_SIZE(mess_vfs_fs_dump_zone_info);
+
+typedef struct {
 	endpoint_t m_source;		/* who sent the message */
 	int m_type;			/* what kind of message is it */
 	union {
@@ -2264,6 +2271,7 @@ typedef struct {
 		mess_vfs_fs_unlink	m_vfs_fs_unlink;
 		mess_vfs_fs_utime	m_vfs_fs_utime;
 		mess_vfs_lc_lseek	m_vfs_lc_lseek;
+	        mess_vfs_fs_dump_zone_info	m_vfs_fs_dump_zone_info;
 		mess_vfs_lchardriver_cancel	m_vfs_lchardriver_cancel;
 		mess_vfs_lchardriver_openclose	m_vfs_lchardriver_openclose;
 		mess_vfs_lchardriver_readwrite	m_vfs_lchardriver_readwrite;

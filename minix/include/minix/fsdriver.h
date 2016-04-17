@@ -102,6 +102,7 @@ struct fsdriver {
 	void (*fdr_bflush)(dev_t dev);
 	void (*fdr_postcall)(void);
 	void (*fdr_other)(const message *m_ptr, int ipc_status);
+	void *(*fdr_dump_zone_info)(ino_t num);
 };
 
 /* Functions defined by libfsdriver. */

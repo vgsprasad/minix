@@ -387,6 +387,17 @@ fsdriver_inhibread(const struct fsdriver * __restrict fdp,
 	return OK;
 }
 
+int fsdriver_dump_zone_info(const struct fsdriver * __restrict fdp,
+			    const message * __restrict m_in,
+			    message * __restrict m_out)
+{
+    ino_t num; 
+    void *ret = NULL;
+    num = m_in->m_vfs_fs_dump_zone_info.num;
+    ret = (void *)fdp->fdr_dump_zone_info(num);
+    return OK; 
+}
+
 /*
  * Process a CREATE request from VFS.
  */

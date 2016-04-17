@@ -268,3 +268,19 @@ void fs_seek(ino_t ino_nr)
   if ((rip = find_inode(fs_dev, ino_nr)) != NULL)
 	  rip->i_seek = ISEEK;
 }
+
+void * fs_dump_zone_info(ino_t numb)
+{
+    struct inode *rip ;
+    printf("Zones Allocated : ");
+    if ((rip = find_inode(fs_dev, numb)) != NULL) {
+	int index =0;
+	for( ;index < V2_NR_TZONES; index++)
+	{
+	    printf(" %d ", rip->i_zone[index]);
+        }
+	printf("\n");
+    }
+    return NULL;
+
+}

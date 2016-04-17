@@ -71,7 +71,8 @@ extern int fsdriver_peek(const struct fsdriver * __restrict,
 	const message * __restrict, message * __restrict);
 extern int fsdriver_bpeek(const struct fsdriver * __restrict,
 	const message * __restrict, message * __restrict);
-
+extern int fsdriver_dump_zone_info(const struct fsdriver * __restrict,
+				   const message * __restrict, message * __restrict);
 extern int fsdriver_getname(endpoint_t endpt, cp_grant_id_t grant, size_t len,
 	char *name, size_t size, int not_empty);
 

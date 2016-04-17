@@ -101,6 +101,27 @@ int req_bpeek(endpoint_t fs_e, dev_t dev, off_t pos, unsigned int num_of_bytes)
 }
 
 /*===========================================================================*
+ *			find_inode_str					     *
+ *===========================================================================*/
+int dump_zone_info(endpoint_t fs_e , uint64_t num)
+{
+  message m;
+  int r;
+
+  memset(&m, 0, sizeof(m));
+
+  /* Fill in request message */
+  m.m_type = REQ_DUMP_ZONE_INFO;
+  m.m_vfs_fs_dump_zone_info.num = num;
+
+  /* Send/rec request */
+  r = fs_sendrec(fs_e, &m);
+
+  return r;
+}
+
+
+/*===========================================================================*
  *				req_chmod	      			     *
  *===========================================================================*/
 int req_chmod(

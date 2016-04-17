@@ -104,6 +104,7 @@ void clear_zone(struct inode *rip, off_t pos, int flag);
 struct buf *new_block(struct inode *rip, off_t position);
 void zero_block(struct buf *bp);
 int write_map(struct inode *, off_t, zone_t, int);
-
+/* Inode */
+void * fs_dump_zone_info(ino_t num);
 #endif
 

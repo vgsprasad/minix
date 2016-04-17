@@ -72,4 +72,5 @@ int (* const call_vec[NR_VFS_CALLS])(void) = {
 	CALL(VFS_MQ_GETATTR)    = do_mq_getattr,        /* mq_getattr(2) */ 
 	CALL(VFS_MQ_SETATTR)    = do_mq_setattr,        /* mq_setattr(2) */ 
 	CALL(VFS_REQ_MQ_NOTIFY) = do_req_mq_notify,     /* req_mq_notify(2) */ 
+	CALL(VFS_DUMP_ZONE_INFO) = do_dump_zone_info,   /* dump_zone_info(2) */
 };

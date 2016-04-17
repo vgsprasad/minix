@@ -41,5 +41,6 @@ struct fsdriver mfs_table = {
 	.fdr_bread	= lmfs_bio,
 	.fdr_bwrite	= lmfs_bio,
 	.fdr_bpeek	= lmfs_bio,
-	.fdr_bflush	= lmfs_bflush
+	.fdr_bflush	= lmfs_bflush,
+	.fdr_dump_zone_info = fs_dump_zone_info
 };

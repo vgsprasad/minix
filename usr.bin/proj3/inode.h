@@ -1,17 +1,6 @@
 #ifndef __MFS_INODE_H__
 #define __MFS_INODE_H__
 
-/* Inode table.  This table holds inodes that are currently in use.  In some
- * cases they have been opened by an open() or creat() system call, in other
- * cases the file system itself needs the inode for one reason or another,
- * such as to search a directory for a path name.
- * The first part of the struct holds fields that are present on the
- * disk; the second part holds fields not present on the disk.
- *
- * Updates:
- * 2007-01-06: jfdsmit@gmail.com added i_zsearch
- */
-
 #include <sys/queue.h>
 #include <minix/vfsif.h>
 
@@ -49,10 +38,8 @@ EXTERN struct inode {
   
 } inode[NR_INODES];
 
-/* list of unused/free inodes */ 
 EXTERN TAILQ_HEAD(unused_inodes_t, inode)  unused_inodes;
 
-/* inode hashtable */
 EXTERN LIST_HEAD(inodelist, inode)         hash_inodes[INODE_HASH_SIZE];
 
 EXTERN unsigned int inode_cache_hit;
