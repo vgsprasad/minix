@@ -5,8 +5,8 @@
 #include "fs.h"
 #include "inode.h"
 #include "super.h"
-
-int main()
+#define SUPER_BLOCK_SIZE 1024 
+int main(int argc, char **argv)
 {
     struct super_block sb;
     int fd;
@@ -16,10 +16,22 @@ int main()
     int zmapsize, blksize;
     int index;
     char *ptr;
-    fd = open("/dev/c0d0p2",O_RDONLY);
+    FILE *fp;
+    char *str=malloc(1024);
+    char *path = malloc(1024);
+    if (argc < 2) {
+	printf("Usage : <binary> <file_name> \n");
+	return 1;
+    }
+    memset(str,0,1024);
+    memset(path,0,1024);
+    sprintf(str,"df %s | grep dev ",argv[1]);
+    fp = popen(str,"r");
+    fscanf(fp,"%s",path);
+    fd = open(path, O_RDONLY);
     lseek(fd,1024,SEEK_SET);
     n = read(fd,&sb,sizeof(struct super_block ));
-    lseek(fd, sizeof(struct super_block) + 1024 + (sb.s_block_size*sb.s_imap_blocks), 
+    lseek(fd, SUPER_BLOCK_SIZE + 1024 + 1024 * 6 +(sb.s_block_size*sb.s_imap_blocks), 
 	  SEEK_SET);
 
     zmapsize = sb.s_zmap_blocks;
